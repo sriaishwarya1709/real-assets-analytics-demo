@@ -1,0 +1,41 @@
+@model ChartResult
+@if (Model.ChartType == "pie")
+{
+    var total = Model.Points.Sum(p => p.Value);
+    decimal start = 0;
+    <div class="pie-layout">
+        <svg class="pie-chart" viewBox="0 0 360 360" role="img" aria-label="@Model.Title"><title>@Model.Title</title>
+            @for (var i = 0; i < Model.Points.Length; i++)
+            {
+                var point = Model.Points[i];
+                var fraction = point.Value / total;
+                <path d="@ChartDrawing.PiePath(start, fraction)" fill="@ChartDrawing.Colors[i % ChartDrawing.Colors.Length]" stroke="#151e2c" stroke-width="2"><title>@point.Label: @ChartDrawing.Display(point.Value) @Model.Unit (@ChartDrawing.Number(fraction * 100)%)</title></path>
+                start += fraction;
+            }
+        </svg>
+        <ul class="legend">@for (var i = 0; i < Model.Points.Length; i++)
+        { <li><svg width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="5" fill="@ChartDrawing.Colors[i % ChartDrawing.Colors.Length]" /></svg><span>@Model.Points[i].Label</span><strong>@ChartDrawing.Display(Model.Points[i].Value)</strong><small>@ChartDrawing.Number(Model.Points[i].Value / total * 100)%</small></li> }</ul>
+    </div>
+}
+else
+{
+    var (min, span) = ChartDrawing.Range(Model);
+    var zero = 240 + (-min / span * 440);
+    <div class="bar-container"><svg class="bar-chart" viewBox="0 0 820 @(Model.Points.Length * 48 + 50)" role="img" aria-label="@Model.Title"><title>@Model.Title</title>
+        @for (var tick = 0; tick <= 4; tick++)
+        {
+            var x = 240 + tick * 110;
+            <line x1="@x" y1="5" x2="@x" y2="@(Model.Points.Length * 48)" class="grid-line" />
+            <g><text x="@x" y="@(Model.Points.Length * 48 + 25)" class="axis-label" text-anchor="middle">@ChartDrawing.Display(min + span * tick / 4)</text></g>
+        }
+        <line x1="@ChartDrawing.Number(zero)" y1="5" x2="@ChartDrawing.Number(zero)" y2="@(Model.Points.Length * 48)" class="zero-line" />
+        @for (var i = 0; i < Model.Points.Length; i++)
+        {
+            var point = Model.Points[i];
+            var end = 240 + (point.Value - min) / span * 440;
+            <g><text x="220" y="@(i * 48 + 28)" text-anchor="end" class="category-label">@(point.Label.Length > 28 ? point.Label[..25] + "..." : point.Label)<title>@point.Label</title></text>
+            <rect x="@ChartDrawing.Number(Math.Min(zero, end))" y="@(i * 48 + 9)" width="@ChartDrawing.Number(Math.Abs(end - zero))" height="28" rx="4" fill="@ChartDrawing.Colors[i % ChartDrawing.Colors.Length]"><title>@point.Label: @ChartDrawing.Display(point.Value) @Model.Unit</title></rect>
+            <text x="705" y="@(i * 48 + 28)" class="value-label">@ChartDrawing.Display(point.Value)</text></g>
+        }
+    </svg></div>
+}

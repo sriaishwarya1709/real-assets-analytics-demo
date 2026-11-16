@@ -1,0 +1,21 @@
+name: Validate demo
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet build src/PortfolioLens/PortfolioLens.csproj --configuration Release
+      - run: dotnet run --project tests/PortfolioLens.Tests --configuration Release
+      - run: |
+          az bicep build --file infra/main.bicep --stdout > /dev/null
+          az bicep build --file infra/foundry.bicep --stdout > /dev/null
+          az bicep build --file infra/fabric-connections.bicep --stdout > /dev/null

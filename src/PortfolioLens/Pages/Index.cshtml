@@ -1,0 +1,78 @@
+@page
+@model IndexModel
+@{ Layout = null; }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Real assets analytics powered by Microsoft Foundry and Fabric IQ." />
+    <title>Portfolio Lens | Real assets intelligence</title>
+    <link rel="stylesheet" href="~/site.css" asp-append-version="true" />
+    <script src="~/site.js" asp-append-version="true" defer></script>
+</head>
+<body>
+<aside class="sidebar">
+    <a class="brand" href="/"><span class="brand-mark">PL</span><span>Portfolio Lens<small>REAL ASSETS INTELLIGENCE</small></span></a>
+    <div class="nav-caption">WORKSPACE</div>
+    <a class="nav-link selected" href="/">Portfolio intelligence <span>&#8599;</span></a>
+    <div class="source-heading"><div class="nav-caption">@(Model.Options.Mode == "Sample" ? "ILLUSTRATIVE DATA DOMAINS" : "CONFIGURED DATA AGENTS")</div><span>@Model.Options.FabricAgents.Length</span></div>
+    @foreach (var agent in Model.Options.FabricAgents)
+    {
+        <div class="agent-card"><span class="agent-icon">&#9671;</span><div><strong>@agent.Name</strong><small>@agent.Description</small></div></div>
+    }
+    <div class="sidebar-footer"><span class="status-dot"></span>@(Model.Options.Mode == "Sample" ? "Sample workspace" : "Live integration configured")<small>Microsoft Foundry + Fabric IQ</small></div>
+</aside>
+<main>
+    <header class="topbar"><span>Investment management <span class="muted">/</span> Portfolio intelligence</span><span class="mode">@Model.Options.Mode mode</span></header>
+    <section class="workspace">
+        <div class="eyebrow">FROM QUESTION TO INVESTMENT INSIGHT</div>
+        <h1>A clearer view of your<br /><span>real assets portfolio.</span></h1>
+        <p class="intro">Explore portfolio performance, property operations and sustainability.<br />Ask a question. Get a grounded answer, ready to visualize and share.</p>
+        <div class="notice @(Model.Options.Mode == "Sample" ? "sample" : "")">
+            @if (Model.Options.Mode == "Sample")
+            { <span><strong>Demo workspace.</strong> All numbers are synthetic. No Foundry or Fabric calls are made in sample mode.</span> }
+            else
+            { <span><strong>Live workspace.</strong> Queries use your signed-in identity. Data access is enforced by Fabric.</span> }
+        </div>
+        <form method="post" class="query-card" id="query-form">
+            <label asp-for="Question">What would you like to understand?</label>
+            <textarea asp-for="Question" rows="2" placeholder="e.g. Compare occupancy across our property sectors" required minlength="5" maxlength="1500"></textarea>
+            @if (!ViewData.ModelState.IsValid)
+            { <div asp-validation-summary="All" class="error" role="alert"></div> }
+            <div class="query-actions"><span class="query-hint">@(Model.Options.Mode == "Sample" ? "5 illustrative metrics" : "Routed across your Fabric data agents")</span>
+                <div><label class="sr-only" asp-for="RequestedChart">Chart preference</label><select asp-for="RequestedChart"><option value="auto">Auto visualization</option><option value="bar">Bar chart</option><option value="pie">Pie chart</option></select>
+                <button class="primary" type="submit" id="ask-button">Generate insight <span>&#8594;</span></button></div>
+            </div>
+            <p id="query-progress" class="progress" role="status" hidden>Analyzing your question. Live Fabric queries can take up to 150 seconds...</p>
+        </form>
+        <div class="suggestions"><span>TRY ASKING</span>
+            @foreach (var suggestion in IndexModel.Suggestions)
+            { <button type="button" class="suggestion" data-question="@suggestion">@suggestion <span>&#8599;</span></button> }
+        </div>
+        @if (Model.Error is not null)
+        { <div class="error error-box" role="alert">@Model.Error</div> }
+        @if (Model.Chart is { } chart)
+        {
+            <section class="result-card" aria-label="Analysis result">
+                <div class="result-top"><div><div class="eyebrow">YOUR PORTFOLIO, IN PERSPECTIVE</div><h2>@chart.Title</h2><p class="muted">As of @chart.AsOf <span class="separator">/</span> @chart.Unit</p></div><a class="download" asp-page-handler="Pdf">Download PDF &#8595;</a></div>
+                <div class="result-toolbar"><div class="tag">@(Model.Options.Mode == "Sample" ? "Synthetic sample" : "AI-generated analysis")</div>
+                    <form method="post" asp-page-handler="Chart" class="chart-toggle"><button name="type" value="bar" class="@(chart.ChartType == "bar" ? "active" : "")" aria-pressed="@(chart.ChartType == "bar" ? "true" : "false")">Bar</button><button name="type" value="pie" class="@(chart.ChartType == "pie" ? "active" : "")" disabled="@(!chart.CanUsePie)" aria-pressed="@(chart.ChartType == "pie" ? "true" : "false")">Pie</button></form>
+                </div>
+                <partial name="_Chart" model="chart" />
+                <div class="insight"><strong>THE TAKEAWAY</strong><p>@chart.Summary</p></div>
+                @if (!string.IsNullOrWhiteSpace(chart.Warning))
+                { <p class="warning">@chart.Warning</p> }
+                <div class="provenance"><span>Reported sources: @string.Join(" + ", chart.Sources)</span><a asp-page-handler="Json" target="_blank" rel="noopener">View JSON &#8599;</a></div>
+                <details><summary>View underlying data</summary><table><caption>@chart.Title (@chart.Unit)</caption><thead><tr><th scope="col">Category</th><th scope="col">Value</th></tr></thead><tbody>@foreach (var point in chart.Points) { <tr><th scope="row">@point.Label</th><td>@ChartDrawing.Display(point.Value)</td></tr> }</tbody></table></details>
+            </section>
+        }
+        else
+        {
+            <section class="empty-state"><div class="empty-icon">&#9636;</div><h2>Your next insight starts with a question.</h2><p>Connect the dots across your real assets data.<br />Results appear here as interactive chart views and downloadable reports.</p><div class="flow"><span>Your question</span><b>&#8594;</b><span>Foundry agent</span><b>&#8594;</b><span>Fabric IQ</span><b>&#8594;</b><span>Visual insight</span></div></section>
+        }
+        <footer>Portfolio Lens <span>/</span> Purpose-built for real assets. <span class="footer-note">AI-generated insights require verification. Not investment advice.</span></footer>
+    </section>
+</main>
+</body>
+</html>

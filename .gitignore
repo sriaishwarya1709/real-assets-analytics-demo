@@ -1,0 +1,11 @@
+.tools/
+**/bin/
+**/obj/
+.vs/
+**/appsettings.Local.json
+**/appsettings.Development.json
+.env
+*.user
+*.publishsettings
+artifacts/
+infra/*.local.bicepparam

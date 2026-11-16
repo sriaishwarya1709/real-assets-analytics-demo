@@ -1,0 +1,23 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "title": { "type": "string" },
+    "summary": { "type": "string" },
+    "chartType": { "type": "string", "enum": ["bar", "pie"] },
+    "unit": { "type": "string" },
+    "points": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": { "label": { "type": "string" }, "value": { "type": "number" } },
+        "required": ["label", "value"]
+      }
+    },
+    "sources": { "type": "array", "items": { "type": "string" } },
+    "asOf": { "type": "string" },
+    "warning": { "type": "string" }
+  },
+  "required": ["title", "summary", "chartType", "unit", "points", "sources", "asOf", "warning"]
+}
