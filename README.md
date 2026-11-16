@@ -249,6 +249,10 @@ Grant that deployment identity only the required web-app deployment scope. Run *
 
 The published demo repository already has the **demo** environment, the four variables above, and a dedicated secretless Azure OIDC identity with **Website Contributor** scoped only to this web app. Environment deployments are restricted to `main`. An environment approval rule is not configured; add required reviewers if your GitHub plan supports them.
 
+Both the [validation workflow](https://github.com/sriaishwarya1709/real-assets-analytics-demo/actions/runs/43810256589) and the [OIDC deployment workflow](https://github.com/sriaishwarya1709/real-assets-analytics-demo/actions/runs/43810276151) have completed successfully, including a deployment from GitHub to Azure and the hosted health check.
+
+When configuring federation for another repository, use the exact subject claim issued by GitHub. Some repositories include immutable owner/repository IDs in that claim, for example `repo:<owner>@<owner-id>/<repo>@<repo-id>:environment:demo`, rather than the older name-only format. Match the issuer, audience and subject exactly; do not broaden the trust rule to work around a mismatch.
+
 ## Demo limitations and operations
 
 - This is a demo, not a production-ready investment platform. Review privacy, regional processing, generated-query quality and investment disclaimers.
