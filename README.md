@@ -24,6 +24,7 @@ A .NET 10 real assets analytics demo: ask a question, retrieve governed data thr
 - **Resource group:** `rg-portfolio-lens-demo`.
 - **Hosting:** App Service B1 in East US 2; Key Vault in Sweden Central, reached through private networking. Sweden Central App Service capacity was unavailable.
 - **Verified live backend:** actual Fabric tool calls for all three domains plus a portfolio/operations NOI-yield join; all five chart values compared against the CSV sources, source labels/date/synthetic warning checked, and PDF generation checked for each result. The repeatable verifier is described below.
+- **Verified deployed browser:** delegated sign-in, actual portfolio/occupancy charts, a cross-agent NOI-yield chart checked against all five expected values, bar/pie switching, session-backed JSON export and an HTTP 200 PDF attachment with a valid PDF header. Local and GitHub regression checks pass (51 checks).
 - **Credential maintenance:** the dedicated web application credential expires 90 days after creation on November 16, 2026 UTC. Rotate it and update the Key Vault reference before expiry.
 
 The resources incur Azure/Fabric charges. This deployment queries its isolated synthetic Fabric workspace, not the organization's business data. Additional users need Foundry project access, Fabric item/data access and policy-permitted delegated consent. Only the setup user's delegated web-app consent was granted; tenant-wide admin consent was not granted.
@@ -272,13 +273,13 @@ The script stages only project paths, displays the staged summary, asks for conf
 CI builds and runs checks and compiles Bicep. For subsequent code deployments, configure the GitHub **demo** environment with required reviewers, an Azure deployment identity federated to `repo:<owner>/<repo>:environment:demo`, and variables:
 
 - `AZURE_DEPLOY_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`
-- `AZURE_WEBAPP_NAME`
+- `AZURE_WEBAPP_NAME`, `AZURE_RESOURCE_GROUP`
 
 Grant that deployment identity only the required web-app deployment scope. Run **Deploy existing Azure web app** manually after the initial Bicep deployment. This workflow deploys application code, not identity consent or the Fabric agents.
 
-The published demo repository already has the **demo** environment, the four variables above, and a dedicated secretless Azure OIDC identity with **Website Contributor** scoped only to this web app. Environment deployments are restricted to `main`. An environment approval rule is not configured; add required reviewers if your GitHub plan supports them.
+The published demo repository already has the **demo** environment, the variables above, and a dedicated secretless Azure OIDC identity with **Website Contributor** scoped only to this web app. Environment deployments are restricted to `main`. An environment approval rule is not configured; add required reviewers if your GitHub plan supports them. Deployment explicitly restarts the Linux worker before checking health so that existing workers do not continue serving old assemblies.
 
-Both the [validation workflow](https://github.com/sriaishwarya1709/real-assets-analytics-demo/actions/runs/43810256589) and the [OIDC deployment workflow](https://github.com/sriaishwarya1709/real-assets-analytics-demo/actions/runs/43810276151) have completed successfully, including a deployment from GitHub to Azure and the hosted health check.
+Both the [validation workflow](https://github.com/sriaishwarya1709/real-assets-analytics-demo/actions/runs/43815152159) and the [OIDC deployment workflow](https://github.com/sriaishwarya1709/real-assets-analytics-demo/actions/runs/43815185647) have completed successfully, including a deployment from GitHub to Azure and the hosted health check.
 
 When configuring federation for another repository, use the exact subject claim issued by GitHub. Some repositories include immutable owner/repository IDs in that claim, for example `repo:<owner>@<owner-id>/<repo>@<repo-id>:environment:demo`, rather than the older name-only format. Match the issuer, audience and subject exactly; do not broaden the trust rule to work around a mismatch.
 

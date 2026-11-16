@@ -24,6 +24,11 @@ jobs:
         with:
           app-name: ${{ vars.AZURE_WEBAPP_NAME }}
           package: artifacts/publish
+      - name: Restart the Linux worker to activate deployed assemblies
+        env:
+          RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          WEB_APP_NAME: ${{ vars.AZURE_WEBAPP_NAME }}
+        run: az webapp restart --resource-group "$RESOURCE_GROUP" --name "$WEB_APP_NAME"
       - name: Verify health
         env:
           WEB_APP_NAME: ${{ vars.AZURE_WEBAPP_NAME }}
