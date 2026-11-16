@@ -11,7 +11,7 @@ gh auth status
 if ($LASTEXITCODE -ne 0) { throw 'GitHub sign-in is required.' }
 git init -b main
 if ($LASTEXITCODE -ne 0) { throw 'Git initialization failed.' }
-git add .gitignore README.md src tests infra scripts .github .vscode
+git add .gitignore README.md src tests tools demo-data infra scripts .github .vscode
 if ($LASTEXITCODE -ne 0) { throw 'Git staging failed.' }
 git diff --cached --stat
 Write-Host 'Review staged files for secrets before publishing. The repository will be PRIVATE.'

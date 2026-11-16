@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Azure.Core;
 using Azure.Identity;
 
@@ -26,11 +27,16 @@ public static class AgentProvisioner
         var instructions = File.ReadAllText(Path.Combine(root, "Agent", "instructions.txt")) +
             "\nConnected Fabric data agents:\n" + string.Join("\n", options.FabricAgents.Select(a =>
                 $"- {a.Label} ({a.Name}): {a.Description}"));
+        var schema = JsonNode.Parse(ReadSchema(root).GetRawText())!;
+        schema["properties"]!["sources"]!["items"]!["enum"] =
+            new JsonArray(options.FabricAgents.Select(a => (JsonNode?)JsonValue.Create(a.Label)).ToArray());
         return new
         {
             definition = new
             {
                 kind = "prompt", model = options.ModelDeployment, instructions,
+                text = new { format = new { type = "json_schema", name = "chart_result", strict = true,
+                    schema } },
                 tools = options.FabricAgents.Select(a => new
                 {
                     type = "fabric_iq_preview", server_label = a.Label,

@@ -1,0 +1,6 @@
+sector,occupancy_percent,annual_noi_usd_millions,reporting_date,is_synthetic
+Senior housing,94.2,68.4,2026-09-30,true
+Student housing,96.5,51.2,2026-09-30,true
+Healthcare,92.1,42.8,2026-09-30,true
+Storage,89.8,29.6,2026-09-30,true
+Digital infrastructure,97.3,36.1,2026-09-30,true

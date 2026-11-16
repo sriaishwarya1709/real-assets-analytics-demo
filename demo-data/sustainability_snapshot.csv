@@ -1,0 +1,6 @@
+sector,annual_energy_kwh_per_sq_ft,annual_emissions_tco2e,reporting_date,is_synthetic
+Senior housing,18.4,4200,2026-09-30,true
+Student housing,12.6,2800,2026-09-30,true
+Healthcare,23.1,5100,2026-09-30,true
+Storage,5.2,900,2026-09-30,true
+Digital infrastructure,82.4,8600,2026-09-30,true

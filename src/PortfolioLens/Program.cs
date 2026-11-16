@@ -86,7 +86,8 @@ if (!app.Environment.IsDevelopment())
 app.Use(async (context, next) =>
 {
     context.Response.Headers.ContentSecurityPolicy =
-        "default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'";
+        "default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" +
+        (authEnabled ? " https://login.microsoftonline.com" : "");
     context.Response.Headers.XContentTypeOptions = "nosniff";
     context.Response.Headers["Referrer-Policy"] = "no-referrer";
     context.Response.Headers.CacheControl = "no-store";

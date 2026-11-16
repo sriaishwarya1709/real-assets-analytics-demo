@@ -32,6 +32,8 @@
         <div class="notice @(Model.Options.Mode == "Sample" ? "sample" : "")">
             @if (Model.Options.Mode == "Sample")
             { <span><strong>Demo workspace.</strong> All numbers are synthetic. No Foundry or Fabric calls are made in sample mode.</span> }
+            else if (Model.Options.SyntheticData)
+            { <span><strong>Live integration, synthetic demo data.</strong> Your questions call Foundry and the published Fabric data agents. All figures are illustrative, not customer data.</span> }
             else
             { <span><strong>Live workspace.</strong> Queries use your signed-in identity. Data access is enforced by Fabric.</span> }
         </div>
@@ -56,7 +58,7 @@
         {
             <section class="result-card" aria-label="Analysis result">
                 <div class="result-top"><div><div class="eyebrow">YOUR PORTFOLIO, IN PERSPECTIVE</div><h2>@chart.Title</h2><p class="muted">As of @chart.AsOf <span class="separator">/</span> @chart.Unit</p></div><a class="download" asp-page-handler="Pdf">Download PDF &#8595;</a></div>
-                <div class="result-toolbar"><div class="tag">@(Model.Options.Mode == "Sample" ? "Synthetic sample" : "AI-generated analysis")</div>
+                <div class="result-toolbar"><div class="tag">@(Model.Options.Mode == "Sample" ? "Synthetic sample" : Model.Options.SyntheticData ? "Live Fabric / synthetic data" : "AI-generated analysis")</div>
                     <form method="post" asp-page-handler="Chart" class="chart-toggle"><button name="type" value="bar" class="@(chart.ChartType == "bar" ? "active" : "")" aria-pressed="@(chart.ChartType == "bar" ? "true" : "false")">Bar</button><button name="type" value="pie" class="@(chart.ChartType == "pie" ? "active" : "")" disabled="@(!chart.CanUsePie)" aria-pressed="@(chart.ChartType == "pie" ? "true" : "false")">Pie</button></form>
                 </div>
                 <partial name="_Chart" model="chart" />

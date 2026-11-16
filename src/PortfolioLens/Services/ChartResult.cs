@@ -61,6 +61,7 @@ public sealed class AnalyticsOptions
     public string AgentVersion { get; set; } = "";
     public string ModelDeployment { get; set; } = "";
     public bool Background { get; set; }
+    public bool SyntheticData { get; set; }
     public FabricAgent[] FabricAgents { get; set; } = [];
 
     public void Validate()

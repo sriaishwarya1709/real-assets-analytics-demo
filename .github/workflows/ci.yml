@@ -15,7 +15,10 @@ jobs:
           dotnet-version: '10.0.x'
       - run: dotnet build src/PortfolioLens/PortfolioLens.csproj --configuration Release
       - run: dotnet run --project tests/PortfolioLens.Tests --configuration Release
+      - run: dotnet build tools/DemoSetup/DemoSetup.csproj --configuration Release
+      - run: dotnet build tools/DemoVerify/DemoVerify.csproj --configuration Release
       - run: |
           az bicep build --file infra/main.bicep --stdout > /dev/null
           az bicep build --file infra/foundry.bicep --stdout > /dev/null
           az bicep build --file infra/fabric-connections.bicep --stdout > /dev/null
+          az bicep build --file infra/foundry-project.bicep --stdout > /dev/null

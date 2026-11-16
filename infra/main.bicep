@@ -9,6 +9,8 @@ param location string = resourceGroup().location
 param appServiceLocation string = location
 @allowed(['Sample', 'Live'])
 param analyticsMode string = 'Sample'
+@description('Disclose illustrative data even when querying real Foundry/Fabric services.')
+param syntheticData bool = false
 param tenantId string
 param aadClientId string
 @secure()
@@ -179,6 +181,7 @@ resource web 'Microsoft.Web/sites@2024-11-01' = {
         { name: 'AzureAd__ClientId', value: aadClientId }
         { name: 'AzureAd__ClientSecret', value: '@Microsoft.KeyVault(SecretUri=${clientSecret.properties.secretUriWithVersion})' }
         { name: 'Analytics__Mode', value: analyticsMode }
+        { name: 'Analytics__SyntheticData', value: string(syntheticData) }
         { name: 'Analytics__ProjectEndpoint', value: foundryProjectEndpoint }
         { name: 'Analytics__AgentName', value: agentName }
         { name: 'Analytics__AgentVersion', value: agentVersion }

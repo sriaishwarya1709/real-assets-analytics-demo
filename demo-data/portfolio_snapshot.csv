@@ -1,0 +1,6 @@
+sector,valuation_usd_millions,reporting_date,is_synthetic
+Senior housing,1250,2026-09-30,true
+Student housing,980,2026-09-30,true
+Healthcare,850,2026-09-30,true
+Storage,620,2026-09-30,true
+Digital infrastructure,1100,2026-09-30,true

@@ -11,19 +11,22 @@ A .NET 10 real assets analytics demo: ask a question, retrieve governed data thr
 - Bicep for App Service, Key Vault, optional Foundry project/model and Fabric IQ connections.
 - Focused executable C# checks, GitHub validation and manually triggered OIDC deployment workflows.
 
-**Status:** The synthetic Sample-mode demo is deployed to Azure. Source is published in a private [GitHub repository](https://github.com/sriaishwarya1709/real-assets-analytics-demo). Live Fabric integration still requires the intended real estate data agents.
+**Status:** The Azure website runs in **Live mode**, calling a real Foundry prompt agent connected to three published Fabric data agents over real lakehouse Delta tables. The figures are **synthetic real estate demo data**, not customer data. Source is published in a private [GitHub repository](https://github.com/sriaishwarya1709/real-assets-analytics-demo).
 
 ## Deployed demo
 
 - **URL:** https://portfolio-lens-t5wn44xnzyq4w.azurewebsites.net
 - **Access:** Microsoft Entra sign-in in the deployment tenant.
-- **Mode:** Sample; all numerical results are synthetic, with no live Foundry/Fabric queries.
+- **Mode:** Live integration with synthetic data; no in-memory sample fallback.
+- **Fabric workspace:** [Portfolio_Lens_Demo](https://app.fabric.microsoft.com/groups/e385fa61-cfe9-4757-bbed-0cbce4f5a597/list), assigned to existing F2 capacity. Lakehouse: `real_assets_demo`.
+- **Fabric data agents:** `real_assets_portfolio_agent`, `real_assets_operations_agent`, `real_assets_sustainability_agent`; each published against its own selected table.
+- **Foundry:** dedicated `real-assets` project under existing account `aif-foundry-demo-jrjttnfbidww6`; prompt agent `real-assets-analyst`, pinned version `5`, using existing `gpt-4.1-mini`.
 - **Resource group:** `rg-portfolio-lens-demo`.
 - **Hosting:** App Service B1 in East US 2; Key Vault in Sweden Central, reached through private networking. Sweden Central App Service capacity was unavailable.
-- **Verified:** successful code deployment, healthy `/health` endpoint, authorization-code/PKCE sign-in, resolved private Key Vault credential reference, and authenticated browser chart generation/switching, JSON export and PDF download.
+- **Verified live backend:** actual Fabric tool calls for all three domains plus a portfolio/operations NOI-yield join; all five chart values compared against the CSV sources, source labels/date/synthetic warning checked, and PDF generation checked for each result. The repeatable verifier is described below.
 - **Credential maintenance:** the dedicated web application credential expires 90 days after creation on November 16, 2026 UTC. Rotate it and update the Key Vault reference before expiry.
 
-The resources incur Azure charges. This deployment does not establish a live connection to the organization's Fabric data.
+The resources incur Azure/Fabric charges. This deployment queries its isolated synthetic Fabric workspace, not the organization's business data. Additional users need Foundry project access, Fabric item/data access and policy-permitted delegated consent. Only the setup user's delegated web-app consent was granted; tenant-wide admin consent was not granted.
 
 ## Architecture
 
@@ -84,16 +87,40 @@ Sample mode selects a fixed dataset using metric keywords. It does **not** apply
 
 ### Live-mode examples
 
-Use these only after connecting the relevant Fabric data agents and confirming that their underlying data includes the requested dimensions, metrics and reporting periods. Results depend on source data and the signed-in user's permissions.
+The deployed synthetic lakehouse has one snapshot dated **2026-09-30**. NOI, energy and emissions cover the trailing twelve months ending on that date. These examples work with the provisioned agents; do not request unsupported historical series.
 
 - **Portfolio:** "Show portfolio valuation by property sector for the latest available reporting quarter. Return values in USD millions and include the reporting date."
-- **Operations:** "Compare occupancy by property sector for the latest available month. Use a bar chart and percentages."
-- **Operations:** "Show annual net operating income by property sector for the most recent complete fiscal year. Use a bar chart in USD millions."
-- **Sustainability:** "Compare annual operational emissions by property sector for the latest complete reporting year. Use a bar chart in tCO2e."
+- **Operations:** "Compare occupancy by property sector at the latest reporting date. Use a bar chart and percentages."
+- **Operations:** "Show trailing annual net operating income by property sector at the latest reporting date. Use a bar chart in USD millions."
+- **Sustainability:** "Compare trailing annual operational emissions by property sector at the latest reporting date. Use a bar chart in tCO2e."
 - **Cross-agent:** "Using the portfolio and operations data agents, compare annual NOI yield by property sector for the same reporting period. Calculate NOI divided by valuation only where sector, period and currency match. Return a bar chart in percent and identify missing or incompatible data."
 - **Cross-agent:** "Using the operations and sustainability data agents, compare energy intensity for sectors with occupancy below 95% in a compatible reporting period. Use a bar chart and report the source dates. Do not join incompatible records."
 
 Replace domain names with your configured agent names if different. Cross-agent joins and calculated metrics must be validated against source data; a valid JSON response alone does not establish numerical correctness.
+
+## Provision the synthetic Fabric demo
+
+The versioned `demo-data` CSVs contain five rows each, with common sector keys, reporting date and an explicit `is_synthetic` marker. The .NET setup console uses your Azure CLI user identity to create a dedicated Fabric workspace, assign an **existing active F2-or-higher capacity**, create a lakehouse, upload CSVs to OneLake, load Delta tables, verify table discovery and create/publish three data agents. It refuses to modify a same-named workspace without its ownership marker. Do not point it at customer workspaces.
+
+```powershell
+az login --tenant <tenant-guid>
+dotnet run --project tools\DemoSetup -- <capacity-guid> demo-data artifacts\fabric-demo.json
+# To update agent definitions only, without reloading tables or starting Spark jobs:
+dotnet run --project tools\DemoSetup -- <capacity-guid> demo-data artifacts\fabric-demo.json --agents-only
+```
+
+The ignored manifest contains resource identifiers and MCP URLs, not credentials. The normal setup run overwrites this demo's three tables; `--agents-only` requires those tables already to exist. Shared F2 Spark concurrency limits can delay table loading; retry later rather than cancelling unrelated workloads.
+
+To reuse a deployed Foundry model without creating another account, deploy `infra/foundry-project.bicep` into that account's resource group with `accountName`, `projectName`, `location` and the developer's `userPrincipalId`. Then deploy the Fabric connections and provision the prompt agent using the steps below. Fabric workspace/item definitions are provisioned by C# REST calls because these Fabric items are not ARM Bicep resources; their Azure hosting, Foundry project and connections are covered by Bicep.
+
+Run the four live acceptance checks after setting up the prompt agent:
+
+```powershell
+dotnet run --project tools\DemoVerify -- artifacts\fabric-demo.json `
+  https://<account>.services.ai.azure.com/api/projects/<project> <agent-version> demo-data
+```
+
+This calls the same C# runtime adapter as the website, requires successful actual Fabric tool calls, compares every chart point with the CSVs (including two-decimal NOI yields), and creates PDFs. It saves diagnostic Foundry responses beside the manifest, inside ignored `artifacts`; these contain synthetic query data, not tokens. The deployed snapshot's expected NOI yields are Senior housing 5.47%, Student housing 5.22%, Healthcare 5.04%, Storage 4.77%, Digital infrastructure 3.28%. Integration tests incur model/Fabric usage; CI builds the tools but does not invoke cloud services.
 
 ## Connect real Foundry and Fabric agents
 
@@ -153,6 +180,7 @@ Create the ignored file `src/PortfolioLens/appsettings.Local.json`:
     "AgentName": "real-assets-analyst",
     "AgentVersion": "",
     "Background": false,
+    "SyntheticData": true,
     "FabricAgents": [
       {
         "Label": "portfolio",
@@ -179,7 +207,7 @@ $env:AzureAd__ClientSecret = '<set locally from your approved secret store>'
 dotnet run --project src\PortfolioLens --urls https://localhost:7180 --environment Development
 ```
 
-Keep the prompt and chart schema in `src/PortfolioLens/Agent` under version control. Re-provision and pin a new agent version after changing them. You can also configure an existing portal-created prompt agent with the same prompt/tools/schema.
+Keep the prompt and chart schema in `src/PortfolioLens/Agent` under version control. Re-provision and pin a new agent version after changing them. The schema belongs on the prompt-agent definition: Foundry rejects a per-request `text` override when `agent_reference` is supplied. Provisioning also constrains source labels to the configured agent labels. You can configure a portal-created prompt agent with the same prompt/tools/schema. Set `SyntheticData` to `false` only when intentionally replacing the illustrative data with approved real data.
 
 For long-running Fabric queries, set `Analytics:Background` to `true` **only with a compatible deployed model**. The client polls for up to 150 seconds. Background requests require stored responses, so `store` is enabled in that mode; otherwise it is disabled. A timed-out/disconnected client does not cancel the remote background run. Review Foundry retention, regional processing and costs before enabling it.
 
@@ -219,6 +247,7 @@ $env:AZURE_TENANT_ID = '<tenant-guid>'
 $env:AZURE_AD_CLIENT_ID = '<web-app-registration-client-guid>'
 $env:AZURE_AD_CLIENT_SECRET = '<web-app-registration-secret>'
 $env:ANALYTICS_MODE = 'Live' # or Sample for the synthetic demo
+$env:SYNTHETIC_DATA = 'true' # Keep the disclosure for live queries over illustrative data.
 $env:FOUNDRY_PROJECT_ENDPOINT = 'https://<account>.services.ai.azure.com/api/projects/<project>'
 $env:FOUNDRY_AGENT_VERSION = '<provisioned-version>'
 # For Live mode: array of the SAME configured labels/names/descriptions used when provisioning.

@@ -25,9 +25,7 @@ public sealed class FoundryAnalytics(HttpClient http, Func<Task<string>> getToke
             input = $"Question: {question}\nRequested chart type: {chartType}. Return only the chart JSON contract.",
             tool_choice = "required",
             background = options.Background,
-            store = options.Background,
-            text = new { format = new { type = "json_schema", name = "chart_result", strict = true,
-                schema = AgentProvisioner.ReadSchema(AppContext.BaseDirectory) } }
+            store = options.Background
         };
         using var initial = await SendAsync(HttpMethod.Post, "openai/v1/responses", payload, token, deadline.Token);
         var root = initial.RootElement.Clone();
@@ -46,10 +44,17 @@ public sealed class FoundryAnalytics(HttpClient http, Func<Task<string>> getToke
             throw new ChartException("Foundry returned no chart output.");
         var text = string.Concat(output.EnumerateArray()
             .Where(item => item.TryGetProperty("type", out var type) && type.GetString() == "message")
+            .TakeLast(1)
             .SelectMany(item => item.GetProperty("content").EnumerateArray())
             .Where(item => item.TryGetProperty("type", out var type) && type.GetString() == "output_text")
             .Select(item => item.GetProperty("text").GetString()));
-        return ChartResult.Parse(text, options.FabricAgents.Select(a => a.Label));
+        var result = ChartResult.Parse(text, options.FabricAgents.Select(a => a.Label));
+        if (options.SyntheticData && !result.Warning.Contains("synthetic", StringComparison.OrdinalIgnoreCase))
+        {
+            result = result with { Warning = "SYNTHETIC DEMO DATA. " + result.Warning };
+            result.Validate(options.FabricAgents.Select(a => a.Label));
+        }
+        return result;
     }
 
     private async Task<JsonDocument> SendAsync(HttpMethod method, string path, object? body,

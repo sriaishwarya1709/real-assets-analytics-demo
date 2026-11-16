@@ -67,6 +67,11 @@ live.Validate();
 var definition = JsonSerializer.SerializeToElement(AgentProvisioner.CreateDefinition(live, AppContext.BaseDirectory));
 Check(definition.GetProperty("definition").GetProperty("tools").GetArrayLength() == 3, "Prompt agent provisions every configured Fabric IQ tool");
 Check(definition.GetProperty("definition").GetProperty("tools")[0].GetProperty("type").GetString() == "fabric_iq_preview", "Uses Fabric IQ, not the deprecated connector");
+Check(definition.GetProperty("definition").GetProperty("text").GetProperty("format").GetProperty("strict").GetBoolean(), "Strict chart JSON is configured on the prompt agent");
+Check(definition.GetProperty("definition").GetProperty("text").GetProperty("format").GetProperty("schema")
+    .GetProperty("properties").GetProperty("sources").GetProperty("items").GetProperty("enum")
+    .EnumerateArray().Select(e => e.GetString()).SequenceEqual(live.FabricAgents.Select(a => a.Label)),
+    "Prompt schema constrains sources to exact configured labels, not MCP-prefixed tool names");
 
 foreach (var chart in new[] { allocation, negative, zero, allocation with { Summary = new string('s', 2000), Warning = new string('w', 1000), Points = Enumerable.Range(1, 20).Select(i => new ChartPoint(new string('x', 75) + i, i)).ToArray() } })
 {
@@ -79,10 +84,11 @@ foreach (var chart in new[] { allocation, negative, zero, allocation with { Summ
     Check(text.Contains(chart.Points[^1].Label), "PDF preserves the last full category label, including long reports");
 }
 
-string Response(string text) => JsonSerializer.Serialize(new
+string Response(string text, string? intermediate = null) => JsonSerializer.Serialize(new
 {
     id = "resp_test", status = "completed",
-    output = new[] { new { type = "message", content = new[] { new { type = "output_text", text } } } }
+    output = new[] { intermediate, text }.Where(t => t is not null)
+        .Select(t => new { type = "message", content = new[] { new { type = "output_text", text = t } } })
 });
 var calls = 0;
 using var handler = new StubHandler(async request =>
@@ -93,13 +99,23 @@ using var handler = new StubHandler(async request =>
     using var body = JsonDocument.Parse(await request.Content!.ReadAsStringAsync());
     Check(body.RootElement.GetProperty("tool_choice").GetString() == "required", "Live query requires a data tool");
     Check(!body.RootElement.GetProperty("store").GetBoolean(), "Synchronous query disables response storage");
-    Check(body.RootElement.GetProperty("text").GetProperty("format").GetProperty("strict").GetBoolean(), "Live request requires strict chart JSON");
-    return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(Response(json)) };
+    Check(!body.RootElement.TryGetProperty("text", out _), "Agent-reference requests omit the forbidden text override");
+    return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(Response(json, "{\"not\":\"the final answer\"}")) };
 });
 using var client = new HttpClient(handler);
 var foundry = new FoundryAnalytics(client, () => Task.FromResult("delegated-user-token"), live);
 var answer = await foundry.QueryAsync("What is our allocation?", "pie", default);
-Check(calls == 1 && answer.Title == allocation.Title, "Live adapter parses a valid grounded chart response");
+Check(calls == 1 && answer.Title == allocation.Title, "Live adapter uses the final message, not concatenated intermediate answers");
+live.SyntheticData = true;
+using var disclosureHandler = new StubHandler(_ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+{
+    Content = new StringContent(Response(JsonSerializer.Serialize(allocation with { Warning = "" }, ChartResult.JsonOptions)))
+}));
+using var disclosureClient = new HttpClient(disclosureHandler);
+var disclosed = await new FoundryAnalytics(disclosureClient, () => Task.FromResult("token"), live)
+    .QueryAsync("What is our allocation?", "pie", default);
+Check(disclosed.Warning.Contains("SYNTHETIC DEMO DATA"), "Live synthetic data remains disclosed even when the model omits its warning");
+live.SyntheticData = false;
 using var failureHandler = new StubHandler(_ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.Forbidden)));
 using var failureClient = new HttpClient(failureHandler);
 try
